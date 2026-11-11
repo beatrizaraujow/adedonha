@@ -31,7 +31,7 @@
   },
   "automatico": {
     "ligado": true,
-    "minimoJogadores": 2,
+    "minimoJogadores": 10,
     "esperaParaComecarSegundos": 20,
     "tempoNoResultadoSegundos": 15,
     "tempoNoFinalSegundos": 30

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Adedonha</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-tile">A</span><span id="gameName">ADEDONHA</span></div>
+    <div class="topbar-right">
+      <span id="roundInfo" class="pill hidden"></span>
+      <button id="soundBtn" class="icon-btn" title="Som" aria-label="Ligar ou desligar som">🔊</button>
+    </div>
+  </header>
+
+  <main id="app">
+    <!-- Entrar -->
+    <section id="scr-join" class="screen">
+      <div class="card join-card">
+        <div class="big-tiles" aria-hidden="true"><span>S</span><span>T</span><span>O</span><span>P</span></div>
+        <h1 id="joinTitle">ADEDONHA</h1>
+        <p class="muted">Uma letra, várias categorias, quem preencher primeiro grita STOP.</p>
+        <form id="joinForm" autocomplete="off">
+          <label for="nameInput">Seu nome</label>
+          <input id="nameInput" maxlength="20" placeholder="Como a galera te chama" required>
+          <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+          <p id="joinError" class="error" role="alert"></p>
+          <p id="hostHint" class="hint hidden">Você vai entrar como <b>apresentador</b>: joga e controla a partida.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- Lobby -->
+    <section id="scr-lobby" class="screen hidden">
+      <div class="lobby-grid">
+        <div class="card">
+          <h2>Jogadores <span id="lobbyCount" class="count"></span></h2>
+          <ul id="lobbyPlayers" class="player-list"></ul>
+          <div class="invite">
+            <span class="muted">Link do jogo</span>
+            <div class="invite-row"><code id="inviteUrl"></code><button id="copyBtn" class="btn btn-small">Copiar</button></div>
+          </div>
+          <p id="waitHost" class="hint">Esperando o apresentador começar…</p>
+        </div>
+
+        <div class="card">
+          <h2>Regras</h2>
+          <div id="rulesView" class="rules-view"></div>
+          <form id="rulesForm" class="rules-form hidden">
+            <div class="field"><label for="r-nome">Nome do jogo</label><input id="r-nome" maxlength="30"></div>
+            <div class="row">
+              <div class="field"><label for="r-rodadas">Rodadas</label><input id="r-rodadas" type="number" min="1" max="30"></div>
+              <div class="field"><label for="r-tempo">Tempo da rodada (s)</label><input id="r-tempo" type="number" min="15" max="900"></div>
+              <div class="field"><label for="r-min">STOP liberado após (s)</label><input id="r-min" type="number" min="0" max="900"></div>
+            </div>
+            <label class="check"><input id="r-cheio" type="checkbox"> STOP só com todas as categorias preenchidas</label>
+            <div class="field"><label for="r-cats">Categorias <span class="muted">(uma por linha)</span></label><textarea id="r-cats" rows="8"></textarea></div>
+            <div class="row">
+              <div class="field"><label for="r-catsN">Categorias por rodada <span class="muted">(0 = todas)</span></label><input id="r-catsN" type="number" min="0" max="20"></div>
+              <div class="field grow"><label for="r-letras">Letras sorteáveis</label><input id="r-letras" maxlength="26"></div>
+            </div>
+            <label class="check"><input id="r-norep" type="checkbox"> Não repetir letra na mesma partida</label>
+            <div class="row">
+              <div class="field"><label for="r-unica">Pontos: resposta única</label><input id="r-unica" type="number"></div>
+              <div class="field"><label for="r-rep">Pontos: repetida</label><input id="r-rep" type="number"></div>
+              <div class="field"><label for="r-bonus">Bônus de quem deu STOP</label><input id="r-bonus" type="number"></div>
+            </div>
+            <label class="check"><input id="r-voto" type="checkbox"> Votação: a galera invalida respostas</label>
+            <div class="row">
+              <div class="field"><label for="r-vtempo">Tempo por categoria (s, 0 = sem limite)</label><input id="r-vtempo" type="number" min="0" max="600"></div>
+              <div class="field"><label for="r-vthr">Invalida com mais de (% dos votos)</label><input id="r-vthr" type="number" min="0" max="99"></div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn">Aplicar</button>
+              <button type="button" id="saveRulesBtn" class="btn">Salvar como padrão</button>
+              <span id="rulesMsg" class="muted" role="status"></span>
+            </div>
+          </form>
+          <button id="startBtn" class="btn btn-primary btn-block hidden">▶ Iniciar partida</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contagem / letra -->
+    <section id="scr-countdown" class="screen hidden">
+      <div class="countdown">
+        <p class="kicker" id="cdRound"></p>
+        <div class="letter-tile spin" id="cdLetter">?</div>
+        <p class="kicker">Prepare-se…</p>
+      </div>
+    </section>
+
+    <!-- Jogando -->
+    <section id="scr-play" class="screen hidden">
+      <div class="play-head">
+        <div class="letter-tile small" id="playLetter">A</div>
+        <div class="timer-wrap">
+          <div class="timer-text"><span id="playTimer">0:00</span><span id="playStatus" class="muted"></span></div>
+          <div class="timer-bar"><div id="playBar"></div></div>
+        </div>
+      </div>
+      <div class="play-body">
+        <form id="answersForm" class="answers" autocomplete="off"></form>
+        <aside class="card side">
+          <h3>Progresso</h3>
+          <ul id="playPlayers" class="progress-list"></ul>
+        </aside>
+      </div>
+      <div class="stop-dock">
+        <button id="stopBtn" class="btn-stop" disabled>STOP!</button>
+        <p id="stopHint" class="hint center"></p>
+      </div>
+    </section>
+
+    <!-- Votação -->
+    <section id="scr-vote" class="screen hidden">
+      <div class="vote-head">
+        <div class="letter-tile small" id="voteLetter">A</div>
+        <div>
+          <p class="kicker" id="voteStep"></p>
+          <h2 id="voteCat"></h2>
+        </div>
+        <div class="vote-timer" id="voteTimer"></div>
+      </div>
+      <p class="hint">Toque em <b>✗</b> nas respostas que não valem. Quando terminar, confirme.</p>
+      <ul id="voteList" class="vote-list"></ul>
+      <div class="vote-foot">
+        <button id="confirmBtn" class="btn btn-primary">Confirmar ✓</button>
+        <span id="voteProgress" class="muted"></span>
+      </div>
+    </section>
+
+    <!-- Resultado da rodada -->
+    <section id="scr-result" class="screen hidden">
+      <div class="result-head">
+        <div class="letter-tile small" id="resLetter">A</div>
+        <div><p class="kicker" id="resRound"></p><h2 id="resTitle">Resultado da rodada</h2></div>
+      </div>
+      <p id="resStop" class="hint"></p>
+      <div class="table-wrap card"><table id="resTable" class="res-table"></table></div>
+      <div class="card"><h3>Placar geral</h3><ol id="resRanking" class="ranking"></ol></div>
+      <p id="resWait" class="hint center">Esperando o apresentador…</p>
+    </section>
+
+    <!-- Final -->
+    <section id="scr-final" class="screen hidden">
+      <h1 class="final-title">Fim de jogo!</h1>
+      <div id="podium" class="podium"></div>
+      <div class="card"><ol id="finalRanking" class="ranking"></ol></div>
+    </section>
+
+    <!-- Fora da rodada -->
+    <section id="scr-spectate" class="screen hidden">
+      <div class="card center-card">
+        <h2>Rodada em andamento</h2>
+        <p class="muted">Você entra na próxima rodada. Segura aí!</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="stopOverlay" class="overlay hidden"><div class="overlay-card"><div class="overlay-stop">STOP!</div><p id="stopWho"></p></div></div>
+  <div id="toast" class="toast hidden" role="status"></div>
+
+  <nav id="hostBar" class="host-bar hidden" aria-label="Controles do apresentador">
+    <span class="host-label">🎤 Apresentador</span>
+    <button id="hNext" class="btn btn-small btn-primary hidden"></button>
+    <button id="hEnd" class="btn btn-small hidden">🏁 Encerrar partida</button>
+    <button id="hLobby" class="btn btn-small hidden">♻ Voltar ao lobby</button>
+  </nav>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

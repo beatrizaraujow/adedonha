@@ -1,0 +1,32 @@
+{
+  "nomeDoJogo": "ADEDONHA",
+  "rodadas": 5,
+  "tempoRodadaSegundos": 120,
+  "tempoMinimoParaStopSegundos": 20,
+  "stopSoComTudoPreenchido": true,
+  "letras": "ABCDEFGHIJLMNOPQRSTUVZ",
+  "naoRepetirLetra": true,
+  "categorias": [
+    "Nome",
+    "CEP (cidade, estado ou país)",
+    "Animal",
+    "Cor",
+    "Fruta, legume ou verdura",
+    "Objeto",
+    "Marca",
+    "Profissão",
+    "Modelo de Boné",
+    "Personagem da empresa"
+  ],
+  "categoriasPorRodada": 0,
+  "pontos": {
+    "respostaUnica": 10,
+    "respostaRepetida": 5,
+    "bonusQuemDeuStop": 0
+  },
+  "votacao": {
+    "ligada": true,
+    "tempoPorCategoriaSegundos": 40,
+    "invalidaSeRejeitadaPorMaisDe": 0.5
+  }
+}

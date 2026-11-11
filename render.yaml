@@ -1,0 +1,16 @@
+# Configuração do Render (Blueprint): cria o serviço web do jogo automaticamente
+services:
+  - type: web
+    name: adedonha
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Código secreto do apresentador (link: https://SEU-ENDERECO/?host=CÓDIGO).
+      # O Render pede para você digitar na criação; depois dá para trocar em Environment no painel.
+      - key: HOST_KEY
+        sync: false

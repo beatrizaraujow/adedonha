@@ -1,0 +1,20 @@
+{
+  "name": "adedonha",
+  "version": "1.0.0",
+  "description": "Adedonha (Stop) multiplayer interna da equipe, com regras configuráveis",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/simulate.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}

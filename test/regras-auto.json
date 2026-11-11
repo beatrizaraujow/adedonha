@@ -1,0 +1,9 @@
+{
+  "rodadas": 1,
+  "tempoRodadaSegundos": 60,
+  "tempoMinimoParaStopSegundos": 0,
+  "letras": "C",
+  "categorias": ["Nome", "Animal"],
+  "votacao": { "ligada": true, "tempoPorCategoriaSegundos": 40 },
+  "automatico": { "ligado": true, "minimoJogadores": 2, "esperaParaComecarSegundos": 20, "tempoNoResultadoSegundos": 15, "tempoNoFinalSegundos": 30 }
+}

@@ -1,4 +1,4 @@
-// Teste automático: 3 jogadores, 2 rodadas (STOP + votação + tempo esgotado), placar e reconexão.
+// Teste do modo com apresentador: 3 jogadores, 2 rodadas (STOP + votação + tempo esgotado), placar e reconexão.
 // Uso: npm test   (sobe um servidor de teste próprio na porta 3998, com cronômetros acelerados, e desliga no fim)
 const { io } = require('socket.io-client');
 const { spawn } = require('child_process');
@@ -8,7 +8,7 @@ const URL = `http://localhost:${PORT}`;
 const HOST_KEY = 'teste';
 const wait = ms => new Promise(r => setTimeout(r, ms));
 const srv = spawn(process.execPath, [path.join(__dirname, '..', 'server.js')], {
-  env: { ...process.env, PORT, HOST_KEY, TIME_SCALE: '0.05' }, stdio: ['ignore', 'pipe', 'inherit'],
+  env: { ...process.env, PORT, HOST_KEY, TIME_SCALE: '0.05', RULES_FILE: path.join(__dirname, 'regras-com-apresentador.json') }, stdio: ['ignore', 'pipe', 'inherit'],
 });
 const srvReady = new Promise(r => srv.stdout.on('data', d => { if (String(d).includes('no ar')) r(); }));
 process.on('exit', () => srv.kill());

@@ -1,7 +1,26 @@
 # 🔤 ADEDONHA
 
 Adedonha (Stop) multiplayer para a equipe. Cada um joga no **próprio notebook ou celular**.
-Um dos jogadores é o **apresentador**: joga normalmente e também controla a partida e as regras.
+
+**Modo automático (padrão):** não tem apresentador. É só mandar o link: quando a sala tem o mínimo de jogadores,
+começa uma contagem e a partida inicia sozinha. Resultado, próxima rodada, pódio e a volta ao lobby também avançam por tempo.
+
+**Modo com apresentador** (`"automatico": { "ligado": false }` no `regras.json`): um dos jogadores controla a partida
+e pode mudar as regras pelo lobby. As seções sobre apresentador abaixo valem só para esse modo.
+
+## Modo automático
+
+| Campo em `regras.json` → `automatico` | O que faz |
+|---|---|
+| `ligado` | `true` = sem apresentador; `false` = volta o modo com apresentador |
+| `minimoJogadores` | Quantas pessoas precisam estar na sala para a contagem começar |
+| `esperaParaComecarSegundos` | Duração da contagem (quem entrar até o fim já joga). Se alguém sair e ficar abaixo do mínimo, a contagem cancela |
+| `tempoNoResultadoSegundos` | Quanto tempo o resultado da rodada fica na tela antes da próxima |
+| `tempoNoFinalSegundos` | Quanto tempo o pódio fica na tela antes de voltar ao lobby |
+
+- Quem entra no meio de uma partida joga a partir da próxima rodada.
+- No modo automático a votação sempre tem tempo: se `tempoPorCategoriaSegundos` for `0`, vale 60s.
+- Se todo mundo sair no meio, o jogo volta para o lobby.
 
 ## Como rodar
 
@@ -34,7 +53,7 @@ para quem estiver em outro lugar. A porta é **3001**, então dá para rodar os 
 O jogo está configurado para o Render (arquivo `render.yaml`).
 
 - **Jogadores:** `https://SEU-ENDERECO.onrender.com`
-- **Apresentador:** `https://SEU-ENDERECO.onrender.com/?host=CÓDIGO`. O CÓDIGO é o `HOST_KEY` definido no painel do Render, em *Environment*.
+- **Apresentador** (só no modo com apresentador): `https://SEU-ENDERECO.onrender.com/?host=CÓDIGO`. O CÓDIGO é o `HOST_KEY` definido no painel do Render, em *Environment*.
 - **Atualizar o jogo:** todo `git push` para o GitHub faz o Render publicar a versão nova sozinho.
 - **Mudar as regras de vez:** edite o `regras.json` no GitHub. O botão "Salvar como padrão" do lobby só dura até o servidor reiniciar.
 - **Plano grátis:** depois de ~15 min sem ninguém, o servidor dorme. O primeiro acesso depois disso demora ~1 min para acordar, e a partida em andamento se perde. Abra o link um minutinho antes de chamar a galera.
@@ -102,8 +121,8 @@ No lobby, o apresentador remove um jogador clicando no **✕** ao lado do nome.
 npm test
 ```
 
-Sobe um servidor de teste na porta 3998 e simula 3 jogadores numa partida completa
-(STOP, votação, repetidas, letra errada, reconexão, placar).
+Sobe servidores de teste nas portas 3998 e 3997 e simula partidas completas nos dois modos
+(STOP, votação, repetidas, letra errada, reconexão, placar, início e avanço automáticos).
 
 ## Arquivos
 

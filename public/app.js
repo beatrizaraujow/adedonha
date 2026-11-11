@@ -95,6 +95,7 @@
   // ---------------------------------------------------------------- render principal
   function render() {
     const phaseChanged = S.phase !== lastPhase;
+    $('hostHint').classList.toggle('hidden', !wantsHost || S.auto);
     $('gameName').textContent = S.rules.nomeDoJogo;
     document.title = S.rules.nomeDoJogo;
     const inGame = !['lobby', 'final'].includes(S.phase);
@@ -132,7 +133,9 @@
         ${isHost && !p.isHost ? `<button class="kick" data-kick="${esc(p.key)}" title="Remover ${esc(p.name)}" aria-label="Remover ${esc(p.name)}">✕</button>` : ''}
       </li>`).join('');
     $('inviteUrl').textContent = S.invite;
-    $('waitHost').classList.toggle('hidden', isHost);
+    $('waitHost').classList.toggle('hidden', isHost || S.auto);
+    $('autoStatus').classList.toggle('hidden', !S.auto);
+    updateAutoTexts();
     $('startBtn').classList.toggle('hidden', !isHost);
     $('rulesForm').classList.toggle('hidden', !isHost);
     $('rulesView').classList.toggle('hidden', isHost);
@@ -148,6 +151,7 @@
         <li>Resposta única: <b>${r.pontos.respostaUnica}</b> pts · repetida: <b>${r.pontos.respostaRepetida}</b> pts${r.pontos.bonusQuemDeuStop ? ` · bônus STOP: <b>${r.pontos.bonusQuemDeuStop}</b>` : ''}</li>
         <li>${r.votacao.ligada ? 'Depois de cada rodada a galera vota nas respostas que não valem' : 'Sem votação: vale tudo que começa com a letra'}</li>
         <li>Letras: <b>${esc(r.letras.split('').join(' '))}</b></li>
+        ${r.automatico.ligado ? `<li>Começa sozinha <b>${r.automatico.esperaParaComecarSegundos}s</b> depois de ter <b>${r.automatico.minimoJogadores}</b> jogadores na sala</li>` : ''}
       </ul>
       <p class="muted">Categorias${r.categoriasPorRodada ? ` (${r.categoriasPorRodada} sorteadas por rodada)` : ''}:</p>
       <div class="chips">${r.categorias.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div>`;
@@ -344,6 +348,7 @@
         <td class="total">${row.total}</td></tr>`).join('')}</tbody>`;
     $('resRanking').innerHTML = rankingHTML(S.ranking);
     $('resWait').classList.toggle('hidden', !!(me && me.isHost));
+    updateAutoTexts();
   }
   const rankingHTML = list => list.map((p, i) => `<li class="${me && p.key === me.key ? 'me' : ''}"><span class="pos">${i + 1}º</span>${avatar(p)}<span class="pname">${esc(p.name)}</span><b>${p.score}</b></li>`).join('');
 
@@ -356,6 +361,8 @@
       <div class="podium-col p${i + 1}">${avatar(r[i])}<span class="pname">${esc(r[i].name)}</span><span class="pscore">${r[i].score} pts</span>
         <div class="podium-block">${i + 1}º</div></div>`).join('');
     $('finalRanking').innerHTML = rankingHTML(r);
+    $('finalWait').classList.toggle('hidden', !S.auto);
+    updateAutoTexts();
     if (changed) { beep(523, 0.15, 'triangle'); setTimeout(() => beep(659, 0.15, 'triangle'), 160); setTimeout(() => beep(784, 0.3, 'triangle'), 320); }
   }
 
@@ -381,9 +388,26 @@
     if (S.phase === 'final' || confirm('Voltar todo mundo ao lobby? Os pontos serão zerados.')) { rulesFormFilled = false; socket.emit('host:lobby'); }
   };
 
+  // ---------------------------------------------------------------- modo automático (textos com contagem)
+  function updateAutoTexts() {
+    if (!S || !S.auto) return;
+    const secs = deadline ? Math.max(0, Math.ceil((deadline - Date.now()) / 1000)) : null;
+    if (S.phase === 'lobby') {
+      const min = S.rules.automatico.minimoJogadores, n = S.connectedCount;
+      $('autoStatus').innerHTML = secs != null
+        ? `<span class="auto-big">${secs}</span><span>A partida começa em ${secs}s. Quem entrar até lá já joga!</span>`
+        : `<span class="auto-big">${n}/${min}</span><span>Esperando jogadores: ${min - n === 1 ? 'falta 1' : `faltam ${min - n}`} para começar.</span>`;
+    } else if (S.phase === 'roundResult') {
+      $('resWait').textContent = secs == null ? '' : S.round >= S.totalRounds ? `Resultado final em ${secs}s…` : `Próxima rodada em ${secs}s…`;
+    } else if (S.phase === 'final') {
+      $('finalWait').textContent = secs == null ? '' : `Nova partida em ${secs}s…`;
+    }
+  }
+
   // ---------------------------------------------------------------- relógio
   setInterval(() => {
     if (!S) return;
+    updateAutoTexts();
     const left = deadline ? deadline - Date.now() : null;
     if (S.phase === 'playing') {
       const total = S.rules.tempoRodadaSegundos * 1000;

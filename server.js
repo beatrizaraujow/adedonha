@@ -32,12 +32,14 @@ const DEFAULT_RULES = {
   categoriasPorRodada: 0,
   pontos: { respostaUnica: 10, respostaRepetida: 5, bonusQuemDeuStop: 0 },
   votacao: { ligada: true, tempoPorCategoriaSegundos: 40, invalidaSeRejeitadaPorMaisDe: 0.5 },
+  automatico: { ligado: true, minimoJogadores: 2, esperaParaComecarSegundos: 20, tempoNoResultadoSegundos: 15, tempoNoFinalSegundos: 30 },
 };
 
 // Aceita qualquer objeto (arquivo ou formulário do apresentador) e devolve regras válidas
 function sanitizeRules(r, base = DEFAULT_RULES) {
   r = r && typeof r === 'object' ? r : {};
   const p = r.pontos || {}, v = r.votacao || {}, bp = base.pontos, bv = base.votacao;
+  const a = r.automatico || {}, ba = base.automatico || DEFAULT_RULES.automatico;
   let letras = [...new Set(fold(r.letras ?? base.letras).toUpperCase().replace(/[^A-Z]/g, ''))].join('');
   if (!letras) letras = base.letras;
   let cats = Array.isArray(r.categorias) ? r.categorias : String(r.categorias ?? '').split('\n');
@@ -64,6 +66,14 @@ function sanitizeRules(r, base = DEFAULT_RULES) {
       ligada: v.ligada !== undefined ? !!v.ligada : bv.ligada,
       tempoPorCategoriaSegundos: clamp(v.tempoPorCategoriaSegundos, 0, 600, bv.tempoPorCategoriaSegundos),
       invalidaSeRejeitadaPorMaisDe: Number.isFinite(thr) ? Math.min(0.99, Math.max(0, thr)) : bv.invalidaSeRejeitadaPorMaisDe,
+    },
+    // Modo automático: sem apresentador, a partida começa sozinha e as etapas avançam por tempo
+    automatico: {
+      ligado: a.ligado !== undefined ? !!a.ligado : ba.ligado,
+      minimoJogadores: clamp(a.minimoJogadores, 1, 40, ba.minimoJogadores),
+      esperaParaComecarSegundos: clamp(a.esperaParaComecarSegundos, 3, 600, ba.esperaParaComecarSegundos),
+      tempoNoResultadoSegundos: clamp(a.tempoNoResultadoSegundos, 3, 300, ba.tempoNoResultadoSegundos),
+      tempoNoFinalSegundos: clamp(a.tempoNoFinalSegundos, 5, 600, ba.tempoNoFinalSegundos),
     },
   };
 }
@@ -128,6 +138,44 @@ G = freshGame();
 const clearTimer = () => { if (timer) clearTimeout(timer); timer = null; };
 const setPhaseTimer = (ms, fn) => { clearTimer(); G.deadline = ms > 0 ? Date.now() + ms : 0; if (ms > 0) timer = setTimeout(fn, ms); };
 const connectedKeys = () => [...players.values()].filter(p => p.connected).map(p => p.key);
+const AUTO = () => rules.automatico.ligado;
+const autoMs = s => s * 1000 * TIME_SCALE;
+
+// ---------------------------------------------------------------- modo automático
+// No lobby: com o mínimo de jogadores conectados, começa a contagem; se cair abaixo, cancela
+function checkAutoStart() {
+  if (!AUTO() || G.phase !== 'lobby') return;
+  const enough = connectedKeys().length >= rules.automatico.minimoJogadores;
+  if (enough && !timer) setPhaseTimer(autoMs(rules.automatico.esperaParaComecarSegundos), startGame);
+  else if (!enough && timer) { clearTimer(); G.deadline = 0; }
+}
+
+function startGame() {
+  clearTimer();
+  if (!connectedKeys().length) { G = freshGame(); return broadcast(); }
+  players.forEach(p => { p.score = 0; });
+  G = freshGame();
+  startRound();
+}
+
+function backToLobby() {
+  clearTimer();
+  G = freshGame();
+  players.forEach(p => { p.score = 0; });
+  for (const [k, p] of players) if (!p.connected) players.delete(k); // limpa quem saiu
+  checkAutoStart();
+  broadcast();
+}
+
+function afterResult() {
+  if (G.round >= rules.rodadas) showFinal(); else startRound();
+}
+
+function showFinal() {
+  clearTimer(); G.deadline = 0; G.phase = 'final';
+  if (AUTO()) setPhaseTimer(autoMs(rules.automatico.tempoNoFinalSegundos), backToLobby);
+  broadcast();
+}
 
 // ---------------------------------------------------------------- validação e pontos
 function autoCheck(answer, letter) {
@@ -223,7 +271,8 @@ function beginVoteCategory() {
   // Se nenhuma resposta da categoria é votável, pula direto
   const votable = G.participants.some(k => !autoCheck((G.answers[k] || [])[G.voteCat], G.letter));
   if (!votable) return nextVoteCategory();
-  const s = rules.votacao.tempoPorCategoriaSegundos;
+  let s = rules.votacao.tempoPorCategoriaSegundos;
+  if (!s && AUTO()) s = 60; // sem apresentador, a votação não pode ficar esperando para sempre
   setPhaseTimer(s > 0 ? s * 1000 * TIME_SCALE : 0, nextVoteCategory);
   broadcast();
 }
@@ -246,6 +295,7 @@ function finishRound() {
   G.roundResult = computeRoundResult();
   G.history.push({ round: G.round, letter: G.letter });
   G.phase = 'roundResult';
+  if (AUTO()) setPhaseTimer(autoMs(rules.automatico.tempoNoResultadoSegundos), afterResult);
   broadcast();
 }
 
@@ -272,6 +322,8 @@ function publicState(forKey) {
     })),
     me: p ? { key: p.key, name: p.name, isHost: !!p.isHost, playing: G.participants.includes(p.key) } : null,
     invite: PUBLIC_URL || LAN_URL,
+    auto: AUTO(),
+    connectedCount: connectedKeys().length,
   };
   if (p && ['playing', 'collecting'].includes(G.phase)) s.myAnswers = G.answers[p.key] || null;
   if (G.phase === 'voting') {
@@ -322,7 +374,8 @@ app.get('/health', (req, res) => res.send('ok')); // usado pelo Render para sabe
 
 io.on('connection', socket => {
   const wantsHost = socket.handshake.auth && socket.handshake.auth.host;
-  socket.data.host = !!wantsHost && (isHostKey(socket.handshake.auth.hostKey) || isLocalSocket(socket));
+  // No modo automático ninguém é apresentador
+  socket.data.host = !AUTO() && !!wantsHost && (isHostKey(socket.handshake.auth.hostKey) || isLocalSocket(socket));
 
   socket.emit('hello', { invite: PUBLIC_URL || LAN_URL, name: rules.nomeDoJogo, isHost: socket.data.host });
 
@@ -346,6 +399,7 @@ io.on('connection', socket => {
     if (socket.data.host) { players.forEach(x => { x.isHost = false; }); p.isHost = true; }
     socket.data.key = key;
     done({ ok: true, key, name: p.name, token: p.token, isHost: p.isHost });
+    checkAutoStart();
     broadcast();
   });
 
@@ -408,28 +462,25 @@ io.on('connection', socket => {
   socket.on('host:start', () => {
     if (!host() || G.phase !== 'lobby') return;
     if (!connectedKeys().length) return;
-    players.forEach(p => { p.score = 0; });
-    G = freshGame();
-    startRound();
+    startGame();
   });
 
   socket.on('host:next', () => {
     if (!host()) return;
-    if (G.phase === 'roundResult') {
-      if (G.round >= rules.rodadas) { G.phase = 'final'; broadcast(); } else startRound();
-    } else if (G.phase === 'playing') endRound(null);              // encerra o tempo agora
+    if (G.phase === 'roundResult') afterResult();
+    else if (G.phase === 'playing') endRound(null);              // encerra o tempo agora
     else if (G.phase === 'voting') nextVoteCategory();             // pula a categoria
     else if (G.phase === 'countdown') { clearTimer(); beginPlaying(); }
   });
 
   socket.on('host:end', () => {             // encerra a partida e mostra o placar final
     if (!host() || G.phase === 'lobby') return;
-    clearTimer(); G.deadline = 0; G.phase = 'final'; broadcast();
+    showFinal();
   });
 
   socket.on('host:lobby', () => {           // volta todo mundo para o lobby (zera a partida)
     if (!host()) return;
-    clearTimer(); G = freshGame(); players.forEach(p => { p.score = 0; }); broadcast();
+    backToLobby();
   });
 
   socket.on('host:kick', key => {
@@ -446,6 +497,8 @@ io.on('connection', socket => {
     const p = me();
     if (p && p.socketId === socket.id) {
       p.connected = false;
+      if (G.phase === 'lobby') { players.delete(p.key); checkAutoStart(); return broadcast(); } // saiu do lobby = sai da lista
+      if (AUTO() && !connectedKeys().length) return backToLobby();                             // todo mundo saiu no meio
       if (G.phase === 'voting') maybeAllConfirmed(); else broadcast();
     }
   });
@@ -455,8 +508,13 @@ server.listen(PORT, '0.0.0.0', () => {
   const local = `http://localhost:${PORT}`;
   console.log(`\n🔤  ${rules.nomeDoJogo} está no ar!`);
   console.log(`   💻 Jogadores:            ${PUBLIC_URL || LAN_URL}`);
-  console.log(`   🎤 Apresentador (neste notebook): ${local}/?host`);
-  console.log(`      ↳ de outro notebook: ${(PUBLIC_URL || LAN_URL)}/?host=${HOST_KEY}  (código secreto, não mande pros jogadores)`);
+  if (AUTO()) {
+    const a = rules.automatico;
+    console.log(`   🤖 Modo automático: começa ${a.esperaParaComecarSegundos}s depois de entrarem ${a.minimoJogadores} jogador(es), sem apresentador`);
+  } else {
+    console.log(`   🎤 Apresentador (neste notebook): ${local}/?host`);
+    console.log(`      ↳ de outro notebook: ${(PUBLIC_URL || LAN_URL)}/?host=${HOST_KEY}  (código secreto, não mande pros jogadores)`);
+  }
   if (IPS.length > 1) console.log(`   Outros IPs: ${IPS.slice(1).map(i => i.address).join(', ')}`);
   console.log(`   📜 Regras: ${RULES_FILE}\n`);
 });

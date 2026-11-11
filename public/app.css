@@ -127,6 +127,11 @@ textarea { resize: vertical; line-height: 1.4; }
 .invite { background: var(--paper-2); border: 2px dashed var(--ink); border-radius: var(--radius-sm); padding: var(--s3); }
 .invite-row { display: flex; gap: var(--s2); align-items: center; margin-top: var(--s1); }
 .invite-row code { flex: 1; font-weight: 800; word-break: break-all; }
+.auto-status {
+  display: flex; align-items: center; gap: var(--s3); margin-top: var(--s4); padding: var(--s3) var(--s4);
+  background: var(--yellow); border: var(--line) solid var(--ink); border-radius: var(--radius-sm); box-shadow: var(--shadow-sm); font-weight: 800;
+}
+.auto-big { font: 700 2rem var(--font-display); min-width: 2.2em; text-align: center; }
 .rules-list { padding-left: 1.2em; margin: 0 0 var(--s3); line-height: 1.7; }
 .chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
 .chip { background: var(--yellow); border: 2px solid var(--ink); border-radius: 999px; padding: 3px 12px; font-weight: 800; }

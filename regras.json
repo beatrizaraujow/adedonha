@@ -28,5 +28,12 @@
     "ligada": true,
     "tempoPorCategoriaSegundos": 40,
     "invalidaSeRejeitadaPorMaisDe": 0.5
+  },
+  "automatico": {
+    "ligado": true,
+    "minimoJogadores": 2,
+    "esperaParaComecarSegundos": 20,
+    "tempoNoResultadoSegundos": 15,
+    "tempoNoFinalSegundos": 30
   }
 }

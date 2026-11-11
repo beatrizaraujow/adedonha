@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "test": "node test/simulate.js"
+    "test": "node test/simulate.js && node test/auto.js"
   },
   "dependencies": {
     "express": "^4.21.2",
